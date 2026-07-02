@@ -128,5 +128,25 @@ Verify gate (passed 2026-07-02):
 - [x] 4 Playwright specs pass incl. copy actions + custom-start control visible
 - [x] typecheck + lint + build clean
 
-**v0.2 is feature-complete.** Remaining roadmap: dialect expansion (v0.3 — 6-field, Quartz, @nicknames)
-behind the dialect registry; the `next lint` → ESLint CLI migration before Next 16.
+**v0.2 is feature-complete.**
+
+## Phase 6 — Dialect expansion (v0.3)  ✅
+
+Introduced the `dialects.ts` **registry** and generalized the parser core over it (no per-dialect fork):
+
+- **Nicknames**: `@yearly`/`@annually`, `@monthly`, `@weekly`, `@daily`/`@midnight`, `@hourly` (expanded to
+  the dialect's field count).
+- **6-field (seconds)**: seconds field prepended; scheduler iterates seconds; summary/breakdown seconds-aware
+  (second 0 stays silent so 5-field-equivalent output is unchanged).
+- **Quartz**: 6–7 fields (optional **year**), `SUN=1` day-of-week numbering, `?` = unrestricted. `L`/`W`/`#`
+  are explicitly rejected with a clear message (**deliberately deferred** — advanced, high-risk).
+- Refactor threaded through `parser` (`?` + custom dow normalize), `expression` (dialect-aware, nickname
+  expand, variable field count), `timezone`/`scheduler` (seconds + year), `translator`, `warnings`,
+  `preview`, plus a UI **Dialect** selector.
+
+Verify gate (passed 2026-07-02):
+- [x] All 61 prior tests stayed green through the refactor (behavior-preserving)
+- [x] 13 new dialect tests (nicknames, 6-field seconds scheduling, Quartz `?`/year/day-numbering, L/W/#)
+- [x] **74 unit tests + 5 Playwright specs** green; typecheck + lint + build clean
+
+Remaining roadmap: Quartz `L`/`W`/`#`; encode dialect in share URLs; `next lint` → ESLint CLI before Next 16.

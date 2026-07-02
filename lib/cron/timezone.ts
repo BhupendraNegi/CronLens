@@ -9,6 +9,7 @@ export interface WallParts {
   d: number;
   h: number; // 0-23
   mi: number;
+  s: number; // 0-59
 }
 
 // Offset (minutes) of `tz` from UTC at the given instant. East of UTC is positive.
@@ -40,8 +41,9 @@ export function wallToInstant(
   d: number,
   h: number,
   mi: number,
+  s = 0,
 ): number {
-  const guess = Date.UTC(y, mo - 1, d, h, mi, 0);
+  const guess = Date.UTC(y, mo - 1, d, h, mi, s);
   const off = offsetMinutes(tz, new Date(guess));
   let inst = guess - off * 60000;
   const off2 = offsetMinutes(tz, new Date(inst));
@@ -59,12 +61,13 @@ export function wallParts(tz: string, instant: number): WallParts {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
   });
   const m: Record<string, string> = {};
   dtf.formatToParts(new Date(instant)).forEach((p) => {
     if (p.type !== "literal") m[p.type] = p.value;
   });
-  return { y: +m.year, mo: +m.month, d: +m.day, h: +m.hour % 24, mi: +m.minute };
+  return { y: +m.year, mo: +m.month, d: +m.day, h: +m.hour % 24, mi: +m.minute, s: +m.second };
 }
 
 export function formatOffset(min: number): string {

@@ -50,27 +50,40 @@ export const FIELD_META: FieldMeta[] = [
   { key: "dayOfWeek", label: "Day of week", min: 0, max: 7, names: DAY_NAMES, dow: true },
 ];
 
+export interface ParseFieldOptions {
+  allowQuestion?: boolean;
+  // Map a raw value onto JS weekday numbering; overrides the default 7→0 alias.
+  normalizeDow?: (v: number) => number;
+}
+
 export function parseField(
   raw: string,
   min: number,
   max: number,
   nameMap: Record<string, number> | null,
   isDow: boolean,
+  opts: ParseFieldOptions = {},
 ): ParsedField {
   const errors: string[] = [];
   const segments: Segment[] = [];
   const valueSet = new Set<number>();
-  // Day-of-week accepts 7 as an alias for Sunday (0).
-  const norm = (v: number) => (isDow && v === 7 ? 0 : v);
+  // Day-of-week accepts 7 as an alias for Sunday (0) unless a dialect overrides.
+  const norm =
+    opts.normalizeDow ?? ((v: number) => (isDow && v === 7 ? 0 : v));
 
   if (/[?]/.test(raw)) {
+    if (opts.allowQuestion && raw === "?") {
+      // '?' = "no specific value" → unrestricted, same as '*' for matching.
+      for (let i = min; i <= max; i++) valueSet.add(norm(i));
+      return { raw, values: Array.from(valueSet).sort((a, b) => a - b), segments: [{ type: "all" }], errors, isWild: true };
+    }
     errors.push(
-      "The '?' character isn't supported in standard 5-field cron. Try a Quartz-compatible dialect.",
+      "The '?' character isn't supported in this dialect. Try a Quartz-compatible dialect.",
     );
     return { raw, values: [], segments, errors, isWild: false };
   }
   if (/[LW#]/.test(raw)) {
-    errors.push("Special characters (L, W, #) aren't supported in standard 5-field cron.");
+    errors.push("Special characters (L, W, #) aren't supported yet.");
     return { raw, values: [], segments, errors, isWild: false };
   }
 

@@ -2,7 +2,7 @@
 // (Design §20). Ties together parse → translate → schedule → format.
 // Warnings are added in Phase 4.
 
-import type { CronPreviewResult, CronRun } from "./types";
+import type { CronDialect, CronPreviewResult, CronRun } from "./types";
 import { parseExpression } from "./expression";
 import { buildSummary, buildFieldExplanations } from "./translator";
 import { computeRuns } from "./scheduler";
@@ -16,6 +16,7 @@ export interface PreviewInput {
   count: number;
   startInstant: number;
   now: number;
+  dialect?: CronDialect;
   hour12?: boolean;
 }
 
@@ -23,7 +24,7 @@ const EMPTY = (input: PreviewInput): CronPreviewResult => ({
   valid: false,
   expression: input.expression,
   timezone: input.timezone,
-  dialect: "standard-5-field",
+  dialect: input.dialect ?? "standard-5-field",
   summary: null,
   fields: [],
   runs: [],
@@ -33,7 +34,8 @@ const EMPTY = (input: PreviewInput): CronPreviewResult => ({
 
 export function buildPreview(input: PreviewInput): CronPreviewResult {
   const { expression, timezone, count, startInstant, now, hour12 = false } = input;
-  const parsed = parseExpression(expression);
+  const dialect = input.dialect ?? "standard-5-field";
+  const parsed = parseExpression(expression, dialect);
 
   if (parsed.empty) return EMPTY(input);
 
@@ -56,7 +58,7 @@ export function buildPreview(input: PreviewInput): CronPreviewResult {
     valid: true,
     expression,
     timezone,
-    dialect: "standard-5-field",
+    dialect,
     summary: buildSummary(parsed.fields),
     fields: buildFieldExplanations(parsed.fields),
     runs,

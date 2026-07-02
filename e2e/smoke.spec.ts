@@ -38,3 +38,13 @@ test("exposes copy actions and a custom start control", async ({ page }) => {
   await page.getByLabel("Custom").check();
   await expect(page.getByLabel("Custom start date and time")).toBeVisible();
 });
+
+test("6-field dialect understands a seconds expression", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByLabel("Dialect").selectOption("standard-6-field");
+  await page.getByLabel("Cron expression").fill("*/30 * * * * *");
+
+  await expect(page.getByText("Every 30 seconds.")).toBeVisible();
+  await expect(page.getByText("Second", { exact: true })).toBeVisible();
+});

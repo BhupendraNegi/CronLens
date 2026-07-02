@@ -101,9 +101,10 @@ interface DatePhrase {
 }
 
 function datePhrase(domF: ParsedField, monthF: ParsedField, dowF: ParsedField): DatePhrase {
-  const domR = domF.raw !== "*";
-  const monthR = monthF.raw !== "*";
-  const dowR = dowF.raw !== "*";
+  // '*' and Quartz '?' are both unrestricted.
+  const domR = !domF.isWild;
+  const monthR = !monthF.isWild;
+  const dowR = !dowF.isWild;
   const months = () => monthText(monthF.values);
   const doms = () => listJoin(domF.values.map((d) => ordinal(d)));
 
@@ -137,25 +138,52 @@ function datePhrase(domF: ParsedField, monthF: ParsedField, dowF: ParsedField): 
 export function buildSummary(fields: ParsedFields): string {
   const tp = timePhrase(fields.minute, fields.hour);
   const dp = datePhrase(fields.dayOfMonth, fields.month, fields.dayOfWeek);
+
+  // Fold seconds into the time phrase for dialects that carry them. Second 0 is
+  // the implicit default and never mentioned (keeps minute-dialect output stable).
+  let text = tp.text;
+  let freq = tp.freq;
+  const sec = fields.second;
+  if (fields.hasSeconds && sec.raw !== "0") {
+    const seg = sec.segments.length === 1 ? sec.segments[0] : null;
+    if (sec.isWild) {
+      text = "Every second";
+      freq = true;
+    } else if (seg && seg.type === "step") {
+      text = `Every ${seg.step} seconds`;
+      freq = true;
+    } else if (sec.values.length === 1 && !tp.freq && /\d\d:\d\d$/.test(tp.text)) {
+      text = `${tp.text}:${pad(sec.values[0])}`;
+    } else {
+      text = `${tp.text} at second ${sec.values.join(", ")}`;
+    }
+  }
+
   let s: string;
-  if (tp.freq) s = tp.text + (dp.freq ? ", " + dp.freq : "");
-  else s = tp.text + (dp.point ? " " + dp.point : "");
+  if (freq) s = text + (dp.freq ? ", " + dp.freq : "");
+  else s = text + (dp.point ? " " + dp.point : "");
   return s.trim() + ".";
 }
 
+type BreakdownKey = CronFieldExplanation["field"] | "second" | "year";
+
 // Field-by-field breakdown (Design §13). Full names for month/weekday.
-function describeField(field: CronFieldExplanation["field"], F: ParsedField): string {
-  if (F.raw === "*") {
+function describeField(field: BreakdownKey, F: ParsedField): string {
+  if (F.isWild) {
     return {
+      second: "Every second",
       minute: "Every minute",
       hour: "Every hour",
       dayOfMonth: "Every day of the month",
       month: "Every month",
       dayOfWeek: "Every day of the week",
+      year: "Every year",
     }[field];
   }
 
   switch (field) {
+    case "second":
+      return F.values.length === 1 ? `At second ${F.values[0]}` : `At seconds ${F.values.join(", ")}`;
     case "minute":
       return F.values.length === 1 ? `At minute ${F.values[0]}` : `At minutes ${F.values.join(", ")}`;
     case "hour":
@@ -170,18 +198,27 @@ function describeField(field: CronFieldExplanation["field"], F: ParsedField): st
       return "In " + monthText(F.values);
     case "dayOfWeek":
       return weekdayText(F.values);
+    case "year":
+      return F.values.length === 1 ? `In ${F.values[0]}` : "In " + listJoin(F.values.map(String));
   }
 }
 
-const FIELD_ORDER: CronFieldExplanation["field"][] = [
-  "minute", "hour", "dayOfMonth", "month", "dayOfWeek",
-];
-
 export function buildFieldExplanations(fields: ParsedFields): CronFieldExplanation[] {
-  return FIELD_ORDER.map((field) => ({
-    field,
-    rawValue: fields[field].raw,
-    normalizedValue: fields[field].values.join(","),
-    explanation: describeField(field, fields[field]),
+  const rows: { key: BreakdownKey; f: ParsedField }[] = [];
+  if (fields.hasSeconds) rows.push({ key: "second", f: fields.second });
+  rows.push(
+    { key: "minute", f: fields.minute },
+    { key: "hour", f: fields.hour },
+    { key: "dayOfMonth", f: fields.dayOfMonth },
+    { key: "month", f: fields.month },
+    { key: "dayOfWeek", f: fields.dayOfWeek },
+  );
+  if (fields.hasYear && fields.year) rows.push({ key: "year", f: fields.year });
+
+  return rows.map(({ key, f }) => ({
+    field: key as CronFieldExplanation["field"],
+    rawValue: f.raw,
+    normalizedValue: f.values.join(","),
+    explanation: describeField(key, f),
   }));
 }

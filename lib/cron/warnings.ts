@@ -12,10 +12,10 @@ export function buildWarnings(
   year: number,
 ): CronWarning[] {
   const w: CronWarning[] = [];
-  const domR = fields.dayOfMonth.raw !== "*";
-  const dowR = fields.dayOfWeek.raw !== "*";
+  const domR = !fields.dayOfMonth.isWild;
+  const dowR = !fields.dayOfWeek.isWild;
   const keys = ["minute", "hour", "dayOfMonth", "month", "dayOfWeek"] as const;
-  const allWild = keys.every((k) => fields[k].raw === "*");
+  const allWild = keys.every((k) => fields[k].isWild);
 
   const minSeg = fields.minute.segments;
   if (allWild) {

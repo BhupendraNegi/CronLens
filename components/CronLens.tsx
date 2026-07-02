@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { CronDialect } from "@/lib/cron/types";
 import { buildPreview } from "@/lib/cron/preview";
+import { SELECTABLE_DIALECTS, DIALECTS } from "@/lib/cron/dialects";
 import { wallToInstant } from "@/lib/cron/timezone";
 import { localInputValue } from "@/lib/cron/format";
 import { SummaryCard } from "./SummaryCard";
@@ -35,6 +37,7 @@ export function CronLens() {
   const [expression, setExpression] = useState("0 9 * * 1-5");
   const [timezone, setTimezone] = useState("UTC");
   const [count, setCount] = useState(10);
+  const [dialect, setDialect] = useState<CronDialect>("standard-5-field");
   const [now, setNow] = useState(() => Date.now());
   const [startMode, setStartMode] = useState<"now" | "custom">("now");
   const [customStart, setCustomStart] = useState("");
@@ -85,10 +88,11 @@ export function CronLens() {
         expression,
         timezone,
         count,
+        dialect,
         startInstant,
         now,
       }),
-    [expression, timezone, count, startInstant, now],
+    [expression, timezone, count, dialect, startInstant, now],
   );
 
   return (
@@ -126,7 +130,7 @@ export function CronLens() {
           ))}
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
             <label htmlFor="tz" className="text-sm font-medium text-gray-700">
               Timezone
@@ -140,6 +144,23 @@ export function CronLens() {
               {tzOptions.map((tz) => (
                 <option key={tz} value={tz}>
                   {tz}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="dialect" className="text-sm font-medium text-gray-700">
+              Dialect
+            </label>
+            <select
+              id="dialect"
+              value={dialect}
+              onChange={(e) => setDialect(e.target.value as CronDialect)}
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            >
+              {SELECTABLE_DIALECTS.map((d) => (
+                <option key={d} value={d}>
+                  {DIALECTS[d].label}
                 </option>
               ))}
             </select>
@@ -210,7 +231,7 @@ export function CronLens() {
       </div>
 
       <footer className="mt-10 text-center text-xs text-gray-400">
-        CronLens · standard 5-field cron · day-of-week accepts 0 or 7 for Sunday, and names like MON/JAN
+        CronLens · 5-field, 6-field (seconds), and Quartz dialects · nicknames like @daily · names like MON/JAN
       </footer>
     </main>
   );

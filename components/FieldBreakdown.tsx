@@ -1,11 +1,13 @@
 import type { CronFieldExplanation } from "@/lib/cron/types";
 
 const LABELS: Record<CronFieldExplanation["field"], string> = {
+  second: "Second",
   minute: "Minute",
   hour: "Hour",
   dayOfMonth: "Day of month",
   month: "Month",
   dayOfWeek: "Day of week",
+  year: "Year",
 };
 
 export function FieldBreakdown({ fields }: { fields: CronFieldExplanation[] }) {

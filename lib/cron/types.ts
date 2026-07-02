@@ -17,6 +17,9 @@ export type CronField =
   | "month"
   | "dayOfWeek";
 
+// Breakdown rows can also cover seconds and year for extended dialects.
+export type CronExplanationField = CronField | "second" | "year";
+
 export interface CronPreviewRequest {
   expression: string;
   timezone: string;
@@ -26,7 +29,7 @@ export interface CronPreviewRequest {
 }
 
 export interface CronFieldExplanation {
-  field: CronField;
+  field: CronExplanationField;
   rawValue: string;
   normalizedValue: string;
   explanation: string;
