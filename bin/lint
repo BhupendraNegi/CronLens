@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# bin/lint — static checks: ESLint + TypeScript.
+#
+# Runs inside the container locally (no host toolchain needed). In CI, where
+# pnpm is already on the runner, it runs directly. Detects which by looking for
+# a local pnpm binary.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+info() { printf "\033[34m▸\033[0m %s\n" "$1"; }
+ok()   { printf "\033[32m✓\033[0m %s\n" "$1"; }
+
+if command -v pnpm >/dev/null 2>&1; then
+  info "Linting (eslint)…"
+  pnpm lint
+  info "Type-checking (tsc)…"
+  pnpm exec tsc --noEmit
+else
+  COLIMA_PROFILE="cronlens"
+  export DOCKER_HOST="unix://${HOME}/.colima/${COLIMA_PROFILE}/docker.sock"
+  info "Linting + type-checking (in container)…"
+  docker compose run --rm web sh -c "pnpm lint && pnpm exec tsc --noEmit"
+fi
+
+ok "Lint + typecheck passed"

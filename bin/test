@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# bin/test — run the Vitest suite.
+#
+# Uses host pnpm when present (CI), otherwise runs in the container. Extra args
+# are passed through, e.g. `bin/test --watch` or `bin/test scheduler`.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm test "$@"
+else
+  COLIMA_PROFILE="cronlens"
+  export DOCKER_HOST="unix://${HOME}/.colima/${COLIMA_PROFILE}/docker.sock"
+  docker compose run --rm web pnpm test "$@"
+fi
