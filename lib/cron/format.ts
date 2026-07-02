@@ -57,3 +57,22 @@ export function relativeLabel(instant: number, now: number, tz: string): string 
 export function instantOffset(tz: string, instant: number): number {
   return offsetMinutes(tz, new Date(instant));
 }
+
+// "YYYY-MM-DDTHH:mm" wall-clock value in `tz`, for seeding a datetime-local input.
+export function localInputValue(instant: number, tz: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(instant));
+  const m: Record<string, string> = {};
+  parts.forEach((p) => {
+    if (p.type !== "literal") m[p.type] = p.value;
+  });
+  const hh = String(+m.hour % 24).padStart(2, "0");
+  return `${m.year}-${m.month}-${m.day}T${hh}:${m.minute}`;
+}

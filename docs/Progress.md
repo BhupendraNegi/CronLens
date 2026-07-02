@@ -116,4 +116,17 @@ notes already surfaced in Phase 3's `RunsTable`.
 Verify gate (passed 2026-07-02):
 - [x] 8 warning tests cover every §16/§22 trigger and confirm a plain weekday schedule is warning-free
 - [x] 53 tests total green; typecheck + lint clean
-## Phase 5 — Copy/share + custom start (v0.2)  ⬜
+## Phase 5 — Copy/share + custom start (v0.2)  ✅
+
+Built `share.ts` (encode/decode `?expr&tz&n`, `buildShareUrl`), `exporters.ts` (summary text, runs text,
+Markdown), `CopyActions` component (clipboard with "Copied!" flash), and a "Start from" Now/Custom control
+that reads a `datetime-local` value as wall-clock time in the selected timezone (`localInputValue` seeds it).
+
+Verify gate (passed 2026-07-02):
+- [x] Share params round-trip (`decode(encode(p)) === p`); out-of-range count ignored
+- [x] Exporter output asserted (summary/runs/Markdown); 61 unit tests total
+- [x] 4 Playwright specs pass incl. copy actions + custom-start control visible
+- [x] typecheck + lint + build clean
+
+**v0.2 is feature-complete.** Remaining roadmap: dialect expansion (v0.3 — 6-field, Quartz, @nicknames)
+behind the dialect registry; the `next lint` → ESLint CLI migration before Next 16.

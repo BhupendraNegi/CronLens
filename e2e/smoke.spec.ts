@@ -28,3 +28,13 @@ test("clicking an example fills the input", async ({ page }) => {
   await expect(page.getByLabel("Cron expression")).toHaveValue("*/5 * * * *");
   await expect(page.getByText("Every 5 minutes.")).toBeVisible();
 });
+
+test("exposes copy actions and a custom start control", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByRole("button", { name: "Copy as Markdown" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy share link" })).toBeVisible();
+
+  await page.getByLabel("Custom").check();
+  await expect(page.getByLabel("Custom start date and time")).toBeVisible();
+});

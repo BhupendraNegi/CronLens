@@ -2,10 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { buildPreview } from "@/lib/cron/preview";
+import { wallToInstant } from "@/lib/cron/timezone";
+import { localInputValue } from "@/lib/cron/format";
 import { SummaryCard } from "./SummaryCard";
 import { FieldBreakdown } from "./FieldBreakdown";
 import { RunsTable } from "./RunsTable";
 import { WarningsPanel } from "./WarningsPanel";
+import { CopyActions } from "./CopyActions";
 
 const COMMON_TZ = [
   "UTC",
@@ -33,6 +36,8 @@ export function CronLens() {
   const [timezone, setTimezone] = useState("UTC");
   const [count, setCount] = useState(10);
   const [now, setNow] = useState(() => Date.now());
+  const [startMode, setStartMode] = useState<"now" | "custom">("now");
+  const [customStart, setCustomStart] = useState("");
 
   // Resolve the user's local timezone and any shared URL params on mount.
   // (Kept out of initial state to avoid a hydration mismatch on static export.)
@@ -45,7 +50,9 @@ export function CronLens() {
     const expr = params.get("expr");
     const tz = params.get("tz");
     const n = params.get("n");
-    setTimezone(tz || localTz);
+    const resolvedTz = tz || localTz;
+    setTimezone(resolvedTz);
+    setCustomStart(localInputValue(Date.now(), resolvedTz));
     if (expr != null) setExpression(expr);
     if (n) {
       const parsed = parseInt(n, 10);
@@ -55,6 +62,16 @@ export function CronLens() {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
+
+  // Resolve the start instant: "now" tracks the clock; "custom" reads the
+  // datetime-local value as a wall-clock time in the selected timezone.
+  const startInstant = useMemo(() => {
+    if (startMode === "custom" && customStart) {
+      const m = customStart.match(/^(\d+)-(\d+)-(\d+)T(\d+):(\d+)/);
+      if (m) return wallToInstant(timezone, +m[1], +m[2], +m[3], +m[4], +m[5]);
+    }
+    return now;
+  }, [startMode, customStart, timezone, now]);
 
   const tzOptions = useMemo(() => {
     const set = new Set(COMMON_TZ);
@@ -68,10 +85,10 @@ export function CronLens() {
         expression,
         timezone,
         count,
-        startInstant: now,
+        startInstant,
         now,
       }),
-    [expression, timezone, count, now],
+    [expression, timezone, count, startInstant, now],
   );
 
   return (
@@ -145,12 +162,46 @@ export function CronLens() {
             </select>
           </div>
         </div>
+
+        <div className="mt-4">
+          <span className="text-sm font-medium text-gray-700">Start from</span>
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1.5 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="startMode"
+                checked={startMode === "now"}
+                onChange={() => setStartMode("now")}
+              />
+              Now
+            </label>
+            <label className="flex items-center gap-1.5 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="startMode"
+                checked={startMode === "custom"}
+                onChange={() => setStartMode("custom")}
+              />
+              Custom
+            </label>
+            {startMode === "custom" && (
+              <input
+                type="datetime-local"
+                aria-label="Custom start date and time"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="mt-6 space-y-6">
         <SummaryCard result={result} />
         {result.valid && (
           <>
+            <CopyActions result={result} count={count} />
             <WarningsPanel warnings={result.warnings} />
             <RunsTable runs={result.runs} />
             <FieldBreakdown fields={result.fields} />
