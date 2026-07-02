@@ -66,8 +66,29 @@ Notes for future me:
 
 ---
 
-## Phase 1 — Core parser + scheduler  ⬜
-## Phase 2 — Translator + field breakdown  ⬜
+## Phase 1 — Core parser + scheduler  ✅
+
+Built `parser.ts` (field syntax), `expression.ts` (field-count + per-field parse), `timezone.ts` (Intl-based
+offset/wall/DST helpers), `scheduler.ts` (bounded next-N-runs, DOM/DOW OR rule, DST-gap skip). All ported from
+the design prototype into pure, typed modules with zero React/DOM deps.
+
+Verify gate (passed 2026-07-02):
+- [x] 32 unit tests green: parser syntax + errors, expression validation, scheduler
+- [x] Five canonical expressions produce correct instants in **UTC** and **Asia/Kolkata**
+- [x] DOM/DOW OR behavior and count/horizon bounds covered
+- [x] lint + typecheck clean
+## Phase 2 — Translator + field breakdown  ✅
+
+Built `translator.ts`: `buildSummary` (plain-English, Design §12) and `buildFieldExplanations` (per-field
+breakdown, §13). Full month/weekday names with contiguous-run collapsing ("Monday through Friday").
+
+Verify gate (passed 2026-07-02):
+- [x] Exact-match tests for all §12 example translations and §22 edge-case phrasings
+- [x] §13 field breakdown of `0 9 * * 1-5` matches the documented table
+- [x] 41 tests total green; lint + typecheck clean
+
+Note: used exact-string assertions against the design doc (the oracle) rather than opaque snapshots — stronger
+and self-documenting.
 ## Phase 3 — UI wiring (v0.1 MVP)  ⬜
 ## Phase 4 — Warnings + DST surfacing  ⬜
 ## Phase 5 — Copy/share + custom start (v0.2)  ⬜
