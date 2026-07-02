@@ -149,4 +149,18 @@ Verify gate (passed 2026-07-02):
 - [x] 13 new dialect tests (nicknames, 6-field seconds scheduling, Quartz `?`/year/day-numbering, L/W/#)
 - [x] **74 unit tests + 5 Playwright specs** green; typecheck + lint + build clean
 
-Remaining roadmap: Quartz `L`/`W`/`#`; encode dialect in share URLs; `next lint` → ESLint CLI before Next 16.
+## Phase 7 — Roadmap cleanup  ✅
+
+Cleared the three carried-over items (2026-07-02):
+
+- **Dialect in share URLs** — `?d=<dialect>` (omitted for the default 5-field), read on load; round-trip tested.
+- **`next lint` → ESLint CLI** — flat `eslint.config.mjs` via `FlatCompat` extending `next/core-web-vitals`;
+  `lint` script is now `eslint .`; dropped `.eslintrc.json`; added `@eslint/eslintrc`. No deprecation warning.
+- **Quartz `L`/`W`/`#`** — `special.ts` parses and matches `L`, `L-<n>`, `LW`, `<d>W` (day-of-month) and
+  `<d>L`, `<d>#<n>` (day-of-week). `ParsedField.special` carries a per-date rule the scheduler evaluates;
+  summary + breakdown describe them. 10 tests scheduling on real 2026 dates.
+
+Verify gate: **87 unit tests** + Playwright specs green; typecheck + lint + build clean.
+
+Remaining/optional: `@weekly`-style extras, additional platform-preset dialects (K8s/GHA/EventBridge), and
+per-run 12-hour formatting toggle — all deferred, none blocking.
