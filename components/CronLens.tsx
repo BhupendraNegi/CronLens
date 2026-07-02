@@ -5,6 +5,7 @@ import { buildPreview } from "@/lib/cron/preview";
 import { SummaryCard } from "./SummaryCard";
 import { FieldBreakdown } from "./FieldBreakdown";
 import { RunsTable } from "./RunsTable";
+import { WarningsPanel } from "./WarningsPanel";
 
 const COMMON_TZ = [
   "UTC",
@@ -150,6 +151,7 @@ export function CronLens() {
         <SummaryCard result={result} />
         {result.valid && (
           <>
+            <WarningsPanel warnings={result.warnings} />
             <RunsTable runs={result.runs} />
             <FieldBreakdown fields={result.fields} />
           </>

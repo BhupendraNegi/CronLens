@@ -6,8 +6,9 @@ import type { CronPreviewResult, CronRun } from "./types";
 import { parseExpression } from "./expression";
 import { buildSummary, buildFieldExplanations } from "./translator";
 import { computeRuns } from "./scheduler";
+import { buildWarnings } from "./warnings";
 import { formatWall, relativeLabel, instantOffset } from "./format";
-import { formatOffset } from "./timezone";
+import { formatOffset, wallParts } from "./timezone";
 
 export interface PreviewInput {
   expression: string;
@@ -40,7 +41,7 @@ export function buildPreview(input: PreviewInput): CronPreviewResult {
     return { ...EMPTY(input), errors: parsed.errors };
   }
 
-  const { runs: scheduled } = computeRuns(parsed.fields, timezone, startInstant, count);
+  const { runs: scheduled, skipped } = computeRuns(parsed.fields, timezone, startInstant, count);
   const runs: CronRun[] = scheduled.map((r, i) => ({
     index: i + 1,
     localDateTime: formatWall(r.instant, timezone, hour12),
@@ -59,7 +60,7 @@ export function buildPreview(input: PreviewInput): CronPreviewResult {
     summary: buildSummary(parsed.fields),
     fields: buildFieldExplanations(parsed.fields),
     runs,
-    warnings: [],
+    warnings: buildWarnings(parsed.fields, timezone, skipped, wallParts(timezone, now).y),
     errors: [],
   };
 }

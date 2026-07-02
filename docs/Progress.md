@@ -107,5 +107,13 @@ Notes:
 - E2E locally: ran the `mcr.microsoft.com/playwright:v1.61.1-jammy` image on the compose network against
   `http://web:3000` (browsers aren't installable in our alpine dev image). In CI, `e2e.yml` runs it natively.
 - Deferred to later phases: warnings panel (Phase 4), copy/share + custom start (Phase 5).
-## Phase 4 — Warnings + DST surfacing  ⬜
+## Phase 4 — Warnings + DST surfacing  ✅
+
+Built `warnings.ts` (every-minute, frequent, DOM-and-DOW OR, leap-year, some-months-skipped, DST-gap,
+tz-observes-DST) wired into `preview.ts`; `WarningsPanel` renders them with severity styling. Per-run DST
+notes already surfaced in Phase 3's `RunsTable`.
+
+Verify gate (passed 2026-07-02):
+- [x] 8 warning tests cover every §16/§22 trigger and confirm a plain weekday schedule is warning-free
+- [x] 53 tests total green; typecheck + lint clean
 ## Phase 5 — Copy/share + custom start (v0.2)  ⬜
