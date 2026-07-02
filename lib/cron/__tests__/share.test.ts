@@ -7,6 +7,19 @@ describe("share params", () => {
     expect(decodeShare(encodeShare(p))).toEqual(p);
   });
 
+  it("round-trips a non-default dialect", () => {
+    const p = { expr: "*/30 * * * * *", tz: "UTC", n: 10, dialect: "standard-6-field" as const };
+    expect(decodeShare(encodeShare(p))).toEqual(p);
+  });
+
+  it("omits the default dialect from the query", () => {
+    expect(encodeShare({ expr: "* * * * *", tz: "UTC", n: 5, dialect: "standard-5-field" })).not.toContain("d=");
+  });
+
+  it("ignores an unknown dialect", () => {
+    expect(decodeShare("expr=*+*+*+*+*&d=bogus").dialect).toBeUndefined();
+  });
+
   it("URL-encodes the expression's spaces", () => {
     expect(encodeShare({ expr: "0 9 * * 1-5", tz: "UTC", n: 10 })).toContain("expr=0+9");
   });

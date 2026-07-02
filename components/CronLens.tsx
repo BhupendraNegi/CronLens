@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CronDialect } from "@/lib/cron/types";
 import { buildPreview } from "@/lib/cron/preview";
 import { SELECTABLE_DIALECTS, DIALECTS } from "@/lib/cron/dialects";
+import { decodeShare } from "@/lib/cron/share";
 import { wallToInstant } from "@/lib/cron/timezone";
 import { localInputValue } from "@/lib/cron/format";
 import { SummaryCard } from "./SummaryCard";
@@ -49,18 +50,13 @@ export function CronLens() {
     try {
       localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     } catch {}
-    const params = new URLSearchParams(window.location.search);
-    const expr = params.get("expr");
-    const tz = params.get("tz");
-    const n = params.get("n");
-    const resolvedTz = tz || localTz;
+    const shared = decodeShare(window.location.search);
+    const resolvedTz = shared.tz || localTz;
     setTimezone(resolvedTz);
     setCustomStart(localInputValue(Date.now(), resolvedTz));
-    if (expr != null) setExpression(expr);
-    if (n) {
-      const parsed = parseInt(n, 10);
-      if (parsed > 0 && parsed <= 100) setCount(parsed);
-    }
+    if (shared.expr != null) setExpression(shared.expr);
+    if (shared.n) setCount(shared.n);
+    if (shared.dialect) setDialect(shared.dialect);
 
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);

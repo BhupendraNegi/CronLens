@@ -16,7 +16,12 @@ export function CopyActions({ result, count }: { result: CronPreviewResult; coun
 
   const shareUrl = () => {
     const base = window.location.origin + window.location.pathname;
-    return buildShareUrl(base, { expr: result.expression, tz: result.timezone, n: count });
+    return buildShareUrl(base, {
+      expr: result.expression,
+      tz: result.timezone,
+      n: count,
+      dialect: result.dialect,
+    });
   };
 
   const label = (key: string, base: string) => (copied === key ? "Copied!" : base);
