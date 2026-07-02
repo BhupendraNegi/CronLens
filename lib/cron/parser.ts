@@ -6,6 +6,7 @@
 // turns into English in Phase 2).
 
 import type { CronField } from "./types";
+import type { DomRule, DowRule } from "./special";
 
 export type Segment =
   | { type: "all" }
@@ -21,6 +22,8 @@ export interface ParsedField {
   segments: Segment[];
   errors: string[];
   isWild: boolean;
+  // Quartz L/W/# day rule, evaluated per-date by the scheduler.
+  special?: DomRule | DowRule;
 }
 
 export interface FieldMeta {

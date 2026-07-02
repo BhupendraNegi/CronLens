@@ -4,7 +4,23 @@
 
 import type { CronDialect, CronError } from "./types";
 import { parseField, type ParsedField } from "./parser";
-import { getDialect, NICKNAMES, type FieldSpec } from "./dialects";
+import { getDialect, NICKNAMES, QUARTZ_DAY_NAMES, type FieldSpec } from "./dialects";
+import { parseDomSpecial, parseDowSpecial, type DomRule, type DowRule } from "./special";
+
+// Map a Quartz day-of-week token (name or 1-7) onto JS weekday numbering (0-6).
+function resolveQuartzDow(tok: string): number | null {
+  const up = tok.toUpperCase();
+  if (QUARTZ_DAY_NAMES[up] != null) return QUARTZ_DAY_NAMES[up] - 1;
+  if (/^\d+$/.test(tok)) {
+    const n = +tok;
+    if (n >= 1 && n <= 7) return n - 1;
+  }
+  return null;
+}
+
+function specialField(raw: string, rule: DomRule | DowRule): ParsedField {
+  return { raw, values: [], segments: [], errors: [], isWild: false, special: rule };
+}
 
 export interface ParsedFields {
   second: ParsedField;
@@ -82,15 +98,38 @@ export function parseExpression(
 
   const parsed: Partial<Record<FieldSpec["key"], ParsedField>> = {};
   const errors: CronError[] = [];
+  const pushErr = (spec: FieldSpec, message: string) =>
+    errors.push({
+      code: "field-value",
+      field: spec.key === "second" || spec.key === "year" ? undefined : spec.key,
+      message: `${spec.label} field — ${message}`,
+    });
+
   specs.forEach((spec, i) => {
-    const f = parseField(toks[i], spec.min, spec.max, spec.names, !!spec.isDow, {
+    const tok = toks[i];
+    const isDayField = spec.key === "dayOfMonth" || spec.key === "dayOfWeek";
+
+    // Quartz L/W/# day expressions parse into per-date rules, not value sets.
+    if (dialect.id === "quartz" && isDayField && /[lLwW#]/.test(tok)) {
+      const res =
+        spec.key === "dayOfMonth" ? parseDomSpecial(tok) : parseDowSpecial(tok, resolveQuartzDow);
+      if (res?.rule) {
+        parsed[spec.key] = specialField(tok, res.rule);
+        return;
+      }
+      if (res?.error) {
+        pushErr(spec, res.error);
+        parsed[spec.key] = { raw: tok, values: [], segments: [], errors: [res.error], isWild: false };
+        return;
+      }
+    }
+
+    const f = parseField(tok, spec.min, spec.max, spec.names, !!spec.isDow, {
       allowQuestion: dialect.allowQuestion,
       normalizeDow: spec.normalizeDow,
     });
     parsed[spec.key] = f;
-    for (const message of f.errors) {
-      errors.push({ code: "field-value", field: spec.key === "second" || spec.key === "year" ? undefined : spec.key, message: `${spec.label} field — ${message}` });
-    }
+    for (const message of f.errors) pushErr(spec, message);
   });
 
   const hasSeconds = !!parsed.second;

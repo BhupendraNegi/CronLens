@@ -4,6 +4,7 @@
 import type { CronFieldExplanation } from "./types";
 import type { ParsedField } from "./parser";
 import type { ParsedFields } from "./expression";
+import type { DomRule, DowRule } from "./special";
 
 const MFULL = [
   "", "January", "February", "March", "April", "May", "June",
@@ -100,6 +101,29 @@ interface DatePhrase {
   freq: string; // used after a frequency phrase ("..., Monday through Friday")
 }
 
+// Quartz L/W/# phrasings (capitalized for the field breakdown).
+function describeDomSpecial(r: DomRule): string {
+  switch (r.kind) {
+    case "lastDay":
+      return "On the last day of the month";
+    case "lastDayOffset":
+      return `${r.offset} day${r.offset === 1 ? "" : "s"} before the last day of the month`;
+    case "lastWeekday":
+      return "On the last weekday of the month";
+    case "nearestWeekday":
+      return `On the weekday nearest the ${ordinal(r.day)}`;
+  }
+}
+
+function describeDowSpecial(r: DowRule): string {
+  const day = DFULL[r.dow];
+  return r.kind === "lastOfWeekday"
+    ? `On the last ${day} of the month`
+    : `On the ${ordinal(r.nth)} ${day} of the month`;
+}
+
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+
 function datePhrase(domF: ParsedField, monthF: ParsedField, dowF: ParsedField): DatePhrase {
   // '*' and Quartz '?' are both unrestricted.
   const domR = !domF.isWild;
@@ -107,6 +131,16 @@ function datePhrase(domF: ParsedField, monthF: ParsedField, dowF: ParsedField): 
   const dowR = !dowF.isWild;
   const months = () => monthText(monthF.values);
   const doms = () => listJoin(domF.values.map((d) => ordinal(d)));
+
+  // Quartz L/W/# rules describe the day directly.
+  if (domF.special || dowF.special) {
+    const parts: string[] = [];
+    if (domF.special) parts.push(lowerFirst(describeDomSpecial(domF.special as DomRule)));
+    if (dowF.special) parts.push(lowerFirst(describeDowSpecial(dowF.special as DowRule)));
+    let base = parts.join(" and ");
+    if (monthR) base += " in " + months();
+    return { point: base, freq: base };
+  }
 
   if (!domR && !dowR) {
     if (!monthR) return { point: "every day", freq: "" };
@@ -169,6 +203,11 @@ type BreakdownKey = CronFieldExplanation["field"] | "second" | "year";
 
 // Field-by-field breakdown (Design §13). Full names for month/weekday.
 function describeField(field: BreakdownKey, F: ParsedField): string {
+  if (F.special) {
+    return field === "dayOfMonth"
+      ? describeDomSpecial(F.special as DomRule)
+      : describeDowSpecial(F.special as DowRule);
+  }
   if (F.isWild) {
     return {
       second: "Every second",

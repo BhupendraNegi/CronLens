@@ -61,9 +61,7 @@ describe("quartz", () => {
   it("honors an optional year field", () => {
     expect(runs("0 0 12 1 1 ? 2027", "quartz", 1)).toEqual([Date.UTC(2027, 0, 1, 12, 0, 0)]);
   });
-  it("rejects L/W/# with a clear message", () => {
-    const errs = parseExpression("0 0 12 L * ?", "quartz").errors;
-    expect(errs.length).toBeGreaterThan(0);
-    expect(errs[0].message).toMatch(/L, W, #/);
+  it("accepts L/W/# day expressions (see special.test.ts for behavior)", () => {
+    expect(parseExpression("0 0 12 L * ?", "quartz").errors).toEqual([]);
   });
 });

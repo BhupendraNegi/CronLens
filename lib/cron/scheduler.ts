@@ -7,6 +7,7 @@
 
 import type { ParsedFields } from "./expression";
 import { offsetMinutes, wallParts, wallToInstant } from "./timezone";
+import { domRuleMatches, dowRuleMatches, type DomRule, type DowRule } from "./special";
 
 export interface ScheduledRun {
   instant: number; // epoch ms (UTC)
@@ -34,7 +35,10 @@ export function computeRuns(
   const domSet = new Set(fields.dayOfMonth.values);
   const dowSet = new Set(fields.dayOfWeek.values);
   const yearSet = fields.year ? new Set(fields.year.values) : null;
-  // '*' and Quartz '?' both mean "unrestricted" (isWild covers both).
+  const domSpecial = fields.dayOfMonth.special as DomRule | undefined;
+  const dowSpecial = fields.dayOfWeek.special as DowRule | undefined;
+  // '*' and Quartz '?' both mean "unrestricted" (isWild covers both); a special
+  // rule also counts as restricted.
   const domR = !fields.dayOfMonth.isWild;
   const dowR = !fields.dayOfWeek.isWild;
 
@@ -55,8 +59,8 @@ export function computeRuns(
     if (yearSet && !yearSet.has(y)) continue;
     if (!monthSet.has(mo)) continue;
 
-    const domMatch = domSet.has(d);
-    const dowMatch = dowSet.has(wd);
+    const domMatch = domSpecial ? domRuleMatches(domSpecial, y, mo, d) : domSet.has(d);
+    const dowMatch = dowSpecial ? dowRuleMatches(dowSpecial, y, mo, d, wd) : dowSet.has(wd);
     let dayOk: boolean;
     if (domR && dowR) dayOk = domMatch || dowMatch;
     else if (domR) dayOk = domMatch;
