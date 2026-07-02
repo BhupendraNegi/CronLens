@@ -1,0 +1,21 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      # Host port overridable via PORT (see bin/dev free-port selection).
+      - "${PORT:-3000}:3000"
+    volumes:
+      - .:/app
+      # Named volume so pnpm's node_modules (populated at image build) isn't
+      # shadowed by the source bind-mount above.
+      - node_modules:/app/node_modules
+    environment:
+      # File-watching across the Colima VM mount needs polling for reliable HMR.
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    command: pnpm dev
+
+volumes:
+  node_modules:
