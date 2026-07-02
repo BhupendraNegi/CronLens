@@ -60,9 +60,9 @@ Notes for future me:
 
 ### CI roadmap
 - [x] Lint + typecheck + test + build on PR/main (`ci.yml`)
-- [ ] Add Playwright E2E job (lands with Phase 3)
+- [x] Playwright E2E job (`e2e.yml`) — chromium, on PR/main
 - [ ] Test coverage reporting
-- [ ] Branch protection: require `check` to pass before merge
+- [ ] Branch protection: require `check` + `playwright` to pass before merge
 
 ---
 
@@ -89,6 +89,23 @@ Verify gate (passed 2026-07-02):
 
 Note: used exact-string assertions against the design doc (the oracle) rather than opaque snapshots — stronger
 and self-documenting.
-## Phase 3 — UI wiring (v0.1 MVP)  ⬜
+## Phase 3 — UI wiring (v0.1 MVP)  ✅
+
+Built the orchestrator (`preview.ts`) and run formatting (`format.ts`), then the React UI: `CronLens`
+(client component: input, examples, timezone/runs controls, live recompute) + `SummaryCard`, `RunsTable`
+(responsive table/cards), `FieldBreakdown`. Wired into `app/page.tsx`.
+
+Verify gate (passed 2026-07-02):
+- [x] Static export prerenders the full UI — summary, runs (correct weekend-skipping Thu→Fri→Mon), UTC
+      offsets, and breakdown all present in `out/index.html`
+- [x] `preview.ts` unit tests assert the exact rendered strings (45 unit tests total)
+- [x] **Playwright E2E (3 specs) pass in a real browser** — weekday cron, invalid-expression error,
+      example-chip fill — run via the official Playwright image against the dev container
+- [x] lint + typecheck clean
+
+Notes:
+- E2E locally: ran the `mcr.microsoft.com/playwright:v1.61.1-jammy` image on the compose network against
+  `http://web:3000` (browsers aren't installable in our alpine dev image). In CI, `e2e.yml` runs it natively.
+- Deferred to later phases: warnings panel (Phase 4), copy/share + custom start (Phase 5).
 ## Phase 4 — Warnings + DST surfacing  ⬜
 ## Phase 5 — Copy/share + custom start (v0.2)  ⬜
