@@ -6,5 +6,6 @@ out/
 .DS_Store
 next-env.d.ts
 *.tsbuildinfo
+.pnpm-store/
 playwright-report/
 test-results/
