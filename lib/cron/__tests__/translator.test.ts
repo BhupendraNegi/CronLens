@@ -51,11 +51,11 @@ describe("buildFieldExplanations — Design §13 breakdown of 0 9 * * 1-5", () =
     const p = parseExpression("0 9 * * 1-5");
     const rows = buildFieldExplanations(p.fields!);
     expect(rows).toEqual([
-      { field: "minute", rawValue: "0", normalizedValue: "0", explanation: "At minute 0" },
-      { field: "hour", rawValue: "9", normalizedValue: "9", explanation: "At 09:00" },
-      { field: "dayOfMonth", rawValue: "*", normalizedValue: expect.any(String), explanation: "Every day of the month" },
-      { field: "month", rawValue: "*", normalizedValue: expect.any(String), explanation: "Every month" },
-      { field: "dayOfWeek", rawValue: "1-5", normalizedValue: "1,2,3,4,5", explanation: "Monday through Friday" },
+      { field: "minute", rawValue: "0", normalizedValue: "0", explanation: "At minute 0", hasError: false },
+      { field: "hour", rawValue: "9", normalizedValue: "9", explanation: "At 09:00", hasError: false },
+      { field: "dayOfMonth", rawValue: "*", normalizedValue: expect.any(String), explanation: "Every day of the month", hasError: false },
+      { field: "month", rawValue: "*", normalizedValue: expect.any(String), explanation: "Every month", hasError: false },
+      { field: "dayOfWeek", rawValue: "1-5", normalizedValue: "1,2,3,4,5", explanation: "Monday through Friday", hasError: false },
     ]);
   });
 });

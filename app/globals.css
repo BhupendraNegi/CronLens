@@ -1,5 +1,39 @@
 @import "tailwindcss";
 
+html,
 body {
-  background-color: #f9fafb;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  color: #111827;
+}
+
+::selection {
+  background: #ffdedc;
+  color: #5e1c19;
+}
+
+.font-display {
+  font-family: var(--font-bricolage), var(--font-inter), sans-serif;
+}
+
+@keyframes cl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cl-rise {
+  animation: cl-rise 0.35s ease both;
 }

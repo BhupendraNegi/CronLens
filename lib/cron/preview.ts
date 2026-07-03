@@ -39,8 +39,19 @@ export function buildPreview(input: PreviewInput): CronPreviewResult {
 
   if (parsed.empty) return EMPTY(input);
 
-  if (parsed.fields === null || parsed.errors.length > 0) {
+  // Field-count / nickname errors give us nothing to break down.
+  if (parsed.fields === null) {
     return { ...EMPTY(input), errors: parsed.errors };
+  }
+
+  // Field-value errors: still show the field-by-field breakdown (with the bad
+  // fields flagged), but no summary or runs.
+  if (parsed.errors.length > 0) {
+    return {
+      ...EMPTY(input),
+      fields: buildFieldExplanations(parsed.fields),
+      errors: parsed.errors,
+    };
   }
 
   const { runs: scheduled, skipped } = computeRuns(parsed.fields, timezone, startInstant, count);

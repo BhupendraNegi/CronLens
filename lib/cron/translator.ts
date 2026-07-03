@@ -258,6 +258,8 @@ export function buildFieldExplanations(fields: ParsedFields): CronFieldExplanati
     field: key as CronFieldExplanation["field"],
     rawValue: f.raw,
     normalizedValue: f.values.join(","),
-    explanation: describeField(key, f),
+    // Errored fields show their message in place of a meaning (invalid state).
+    explanation: f.errors.length > 0 ? f.errors[0] : describeField(key, f),
+    hasError: f.errors.length > 0,
   }));
 }

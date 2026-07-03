@@ -5,13 +5,12 @@ import type { CronDialect } from "@/lib/cron/types";
 import { buildPreview } from "@/lib/cron/preview";
 import { SELECTABLE_DIALECTS, DIALECTS } from "@/lib/cron/dialects";
 import { decodeShare } from "@/lib/cron/share";
-import { wallToInstant } from "@/lib/cron/timezone";
+import { wallToInstant, offsetMinutes, formatOffset } from "@/lib/cron/timezone";
 import { localInputValue } from "@/lib/cron/format";
 import { SummaryCard } from "./SummaryCard";
 import { FieldBreakdown } from "./FieldBreakdown";
 import { RunsTable } from "./RunsTable";
 import { WarningsPanel } from "./WarningsPanel";
-import { CopyActions } from "./CopyActions";
 
 const COMMON_TZ = [
   "UTC",
@@ -27,31 +26,39 @@ const COMMON_TZ = [
 const COUNTS = [5, 10, 25, 50, 100];
 
 const EXAMPLES: { label: string; expr: string }[] = [
-  { label: "Every 5 minutes", expr: "*/5 * * * *" },
+  { label: "Every minute", expr: "* * * * *" },
+  { label: "Every 5 min", expr: "*/5 * * * *" },
   { label: "Hourly", expr: "0 * * * *" },
-  { label: "Daily at midnight", expr: "0 0 * * *" },
-  { label: "Weekdays at 9 AM", expr: "0 9 * * MON-FRI" },
-  { label: "Monthly on the 1st", expr: "0 0 1 * *" },
+  { label: "Daily midnight", expr: "0 0 * * *" },
+  { label: "Weekdays 9 AM", expr: "0 9 * * MON-FRI" },
+  { label: "Monthly 1st", expr: "0 0 1 * *" },
+  { label: "Sundays noon", expr: "0 12 * * SUN" },
 ];
+
+const CARD = "rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.04)]";
+const LABEL = "text-[11px] font-semibold uppercase tracking-wider text-[#6b7280]";
+const FIELD =
+  "w-full rounded-xl border border-[#d1d5db] bg-white px-3 py-2.5 text-sm text-[#111827] focus:border-[#6366f1] focus:outline-none focus:ring-2 focus:ring-[#6366f1]/20";
 
 export function CronLens() {
   const [expression, setExpression] = useState("0 9 * * 1-5");
   const [timezone, setTimezone] = useState("UTC");
+  const [localTz, setLocalTz] = useState("UTC");
   const [count, setCount] = useState(10);
   const [dialect, setDialect] = useState<CronDialect>("standard-5-field");
   const [now, setNow] = useState(() => Date.now());
   const [startMode, setStartMode] = useState<"now" | "custom">("now");
   const [customStart, setCustomStart] = useState("");
 
-  // Resolve the user's local timezone and any shared URL params on mount.
-  // (Kept out of initial state to avoid a hydration mismatch on static export.)
   useEffect(() => {
-    let localTz = "UTC";
+    let tz = "UTC";
     try {
-      localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     } catch {}
+    setLocalTz(tz);
+
     const shared = decodeShare(window.location.search);
-    const resolvedTz = shared.tz || localTz;
+    const resolvedTz = shared.tz || tz;
     setTimezone(resolvedTz);
     setCustomStart(localInputValue(Date.now(), resolvedTz));
     if (shared.expr != null) setExpression(shared.expr);
@@ -62,8 +69,21 @@ export function CronLens() {
     return () => clearInterval(t);
   }, []);
 
-  // Resolve the start instant: "now" tracks the clock; "custom" reads the
-  // datetime-local value as a wall-clock time in the selected timezone.
+  const tzOptions = useMemo(() => {
+    const set = new Set(COMMON_TZ);
+    set.add(timezone);
+    set.add(localTz);
+    return Array.from(set).sort();
+  }, [timezone, localTz]);
+
+  const tzLabel = (tz: string) => {
+    let off = "";
+    try {
+      off = ` · ${formatOffset(offsetMinutes(tz, new Date(now)))}`;
+    } catch {}
+    return `${tz === localTz ? "★ " : ""}${tz}${off}`;
+  };
+
   const startInstant = useMemo(() => {
     if (startMode === "custom" && customStart) {
       const m = customStart.match(/^(\d+)-(\d+)-(\d+)T(\d+):(\d+)/);
@@ -72,163 +92,192 @@ export function CronLens() {
     return now;
   }, [startMode, customStart, timezone, now]);
 
-  const tzOptions = useMemo(() => {
-    const set = new Set(COMMON_TZ);
-    set.add(timezone);
-    return Array.from(set).sort();
-  }, [timezone]);
-
   const result = useMemo(
-    () =>
-      buildPreview({
-        expression,
-        timezone,
-        count,
-        dialect,
-        startInstant,
-        now,
-      }),
+    () => buildPreview({ expression, timezone, count, dialect, startInstant, now }),
     [expression, timezone, count, dialect, startInstant, now],
   );
 
+  const hints = DIALECTS[dialect].order.map((f) => f.label.toLowerCase());
+  const seg = (active: boolean) =>
+    `flex-1 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+      active ? "bg-white text-[#4338ca] shadow-sm" : "text-[#6b7280] hover:text-[#374151]"
+    }`;
+
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">CronLens</h1>
-        <p className="mt-1 text-gray-600">Paste a cron expression and see exactly when it runs.</p>
-        <p className="mt-0.5 text-xs text-gray-400">Runs in your browser · nothing leaves this page</p>
+    <div className="mx-auto max-w-6xl px-4 py-8 lg:py-10">
+      {/* Header */}
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#4338ca] to-[#6366f1] shadow-[0_8px_20px_rgba(67,56,202,0.28)]">
+            <svg
+              viewBox="0 0 24 24"
+              width="26"
+              height="26"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+          </span>
+          <div>
+            <h1 className="font-display text-3xl font-bold leading-none">
+              Cron<span className="text-[#4338ca]">Lens.</span>
+            </h1>
+            <p className="mt-1.5 text-sm text-[#4b5563]">
+              Paste a cron expression and see exactly when it runs.
+            </p>
+          </div>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-sm text-[#374151] shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+          <svg
+            viewBox="0 0 24 24"
+            width="15"
+            height="15"
+            fill="none"
+            stroke="#6b7280"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <rect x="4" y="11" width="16" height="9" rx="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+          </svg>
+          Runs in your browser · nothing leaves this page
+        </span>
       </header>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-5">
-        <label htmlFor="cron" className="text-sm font-medium text-gray-700">
-          Cron expression
-        </label>
-        <input
-          id="cron"
-          value={expression}
-          onChange={(e) => setExpression(e.target.value)}
-          spellCheck={false}
-          autoComplete="off"
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-lg text-gray-900 focus:border-gray-900 focus:outline-none"
-          placeholder="minute hour day-of-month month day-of-week"
-        />
-        <div className="mt-2 flex flex-wrap gap-2">
-          {EXAMPLES.map((ex) => (
-            <button
-              key={ex.expr}
-              type="button"
-              onClick={() => setExpression(ex.expr)}
-              className="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 hover:border-gray-400 hover:text-gray-900"
-              title={ex.expr}
-            >
-              {ex.label}
-            </button>
-          ))}
-        </div>
+      {/* Two-column body */}
+      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+        {/* Left */}
+        <div className="space-y-6">
+          <div className={CARD}>
+            <label htmlFor="cron" className={LABEL}>
+              Cron expression
+            </label>
+            <input
+              id="cron"
+              value={expression}
+              onChange={(e) => setExpression(e.target.value)}
+              spellCheck={false}
+              autoComplete="off"
+              className="mt-2 w-full rounded-xl border border-[#d1d5db] bg-[#f9fafb] px-4 py-3.5 font-mono text-xl tracking-wide text-[#111827] focus:border-[#6366f1] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6366f1]/20"
+              placeholder={hints.join(" ")}
+            />
+            <p className="mt-2 font-mono text-xs text-[#9ca3af]">{hints.join("  ")}</p>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div>
-            <label htmlFor="tz" className="text-sm font-medium text-gray-700">
+            <p className={`mt-4 ${LABEL}`}>Examples</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex.expr}
+                  type="button"
+                  onClick={() => setExpression(ex.expr)}
+                  title={ex.expr}
+                  className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 font-mono text-xs text-[#4b5563] transition-colors hover:border-[#c7cbd1] hover:text-[#111827]"
+                >
+                  {ex.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={CARD}>
+            <label htmlFor="tz" className={LABEL}>
               Timezone
             </label>
-            <select
-              id="tz"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            >
+            <select id="tz" value={timezone} onChange={(e) => setTimezone(e.target.value)} className={`mt-2 ${FIELD}`}>
               {tzOptions.map((tz) => (
                 <option key={tz} value={tz}>
-                  {tz}
+                  {tzLabel(tz)}
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <label htmlFor="dialect" className="text-sm font-medium text-gray-700">
-              Dialect
-            </label>
-            <select
-              id="dialect"
-              value={dialect}
-              onChange={(e) => setDialect(e.target.value as CronDialect)}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            >
-              {SELECTABLE_DIALECTS.map((d) => (
-                <option key={d} value={d}>
-                  {DIALECTS[d].label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="count" className="text-sm font-medium text-gray-700">
-              Runs
-            </label>
-            <select
-              id="count"
-              value={count}
-              onChange={(e) => setCount(Number(e.target.value))}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            >
-              {COUNTS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
 
-        <div className="mt-4">
-          <span className="text-sm font-medium text-gray-700">Start from</span>
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-1.5 text-sm text-gray-700">
-              <input
-                type="radio"
-                name="startMode"
-                checked={startMode === "now"}
-                onChange={() => setStartMode("now")}
-              />
-              Now
-            </label>
-            <label className="flex items-center gap-1.5 text-sm text-gray-700">
-              <input
-                type="radio"
-                name="startMode"
-                checked={startMode === "custom"}
-                onChange={() => setStartMode("custom")}
-              />
-              Custom
-            </label>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="dialect" className={LABEL}>
+                  Dialect
+                </label>
+                <select
+                  id="dialect"
+                  value={dialect}
+                  onChange={(e) => setDialect(e.target.value as CronDialect)}
+                  className={`mt-2 ${FIELD}`}
+                >
+                  {SELECTABLE_DIALECTS.map((d) => (
+                    <option key={d} value={d}>
+                      {DIALECTS[d].label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="count" className={LABEL}>
+                  Runs
+                </label>
+                <select
+                  id="count"
+                  value={count}
+                  onChange={(e) => setCount(Number(e.target.value))}
+                  className={`mt-2 ${FIELD}`}
+                >
+                  {COUNTS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <p className={`mt-4 ${LABEL}`}>Start from</p>
+            <div className="mt-2 flex gap-1 rounded-xl bg-[#f3f4f6] p-1">
+              <button type="button" className={seg(startMode === "now")} onClick={() => setStartMode("now")}>
+                Now
+              </button>
+              <button
+                type="button"
+                className={seg(startMode === "custom")}
+                onClick={() => setStartMode("custom")}
+              >
+                Custom
+              </button>
+            </div>
             {startMode === "custom" && (
               <input
                 type="datetime-local"
                 aria-label="Custom start date and time"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className={`mt-3 ${FIELD}`}
               />
             )}
           </div>
         </div>
+
+        {/* Right */}
+        <div className="space-y-6">
+          <SummaryCard result={result} count={count} />
+          <FieldBreakdown fields={result.fields} />
+          <WarningsPanel warnings={result.warnings} />
+          {result.valid && (
+            <RunsTable
+              result={result}
+              startLabel={startMode === "custom" ? "Starting from your custom time" : "Starting from now"}
+            />
+          )}
+        </div>
       </div>
 
-      <div className="mt-6 space-y-6">
-        <SummaryCard result={result} />
-        {result.valid && (
-          <>
-            <CopyActions result={result} count={count} />
-            <WarningsPanel warnings={result.warnings} />
-            <RunsTable runs={result.runs} />
-            <FieldBreakdown fields={result.fields} />
-          </>
-        )}
-      </div>
-
-      <footer className="mt-10 text-center text-xs text-gray-400">
+      <footer className="mt-12 text-center text-xs text-[#9ca3af]">
         CronLens · 5-field, 6-field (seconds), and Quartz dialects · nicknames like @daily · names like MON/JAN
       </footer>
-    </main>
+    </div>
   );
 }

@@ -16,14 +16,14 @@ test("shows an actionable error for an invalid expression", async ({ page }) => 
 
   await page.getByLabel("Cron expression").fill("61 * * * *");
 
-  await expect(page.getByText("Invalid cron expression")).toBeVisible();
+  await expect(page.getByText("Invalid expression")).toBeVisible();
   await expect(page.getByText(/Minute field/)).toBeVisible();
 });
 
 test("clicking an example fills the input", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Every 5 minutes" }).click();
+  await page.getByRole("button", { name: "Every 5 min" }).click();
 
   await expect(page.getByLabel("Cron expression")).toHaveValue("*/5 * * * *");
   await expect(page.getByText("Every 5 minutes.")).toBeVisible();
@@ -32,10 +32,10 @@ test("clicking an example fills the input", async ({ page }) => {
 test("exposes copy actions and a custom start control", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("button", { name: "Copy as Markdown" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Copy share link" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy Markdown" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Share link" })).toBeVisible();
 
-  await page.getByLabel("Custom").check();
+  await page.getByRole("button", { name: "Custom" }).click();
   await expect(page.getByLabel("Custom start date and time")).toBeVisible();
 });
 

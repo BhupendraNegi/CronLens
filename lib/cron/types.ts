@@ -33,6 +33,7 @@ export interface CronFieldExplanation {
   rawValue: string;
   normalizedValue: string;
   explanation: string;
+  hasError?: boolean;
 }
 
 export interface CronRun {

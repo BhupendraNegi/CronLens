@@ -1,65 +1,81 @@
-import type { CronRun } from "@/lib/cron/types";
+import type { CronPreviewResult } from "@/lib/cron/types";
+import { buildRunsText, buildMarkdown } from "@/lib/cron/exporters";
+import { CopyButton } from "./CopyButton";
 
-export function RunsTable({ runs }: { runs: CronRun[] }) {
-  if (runs.length === 0) {
-    return (
-      <div className="rounded-lg border border-gray-200 bg-white p-5">
-        <p className="text-sm text-gray-500">
-          No matching run was found within the search horizon (15 years).
-        </p>
-      </div>
-    );
-  }
+export function RunsTable({
+  result,
+  startLabel,
+}: {
+  result: CronPreviewResult;
+  startLabel: string;
+}) {
+  const runs = result.runs;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5">
-      <h2 className="text-sm font-semibold text-gray-900">Next {runs.length} runs</h2>
+    <div className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold text-[#111827]">
+            Next {runs.length} {runs.length === 1 ? "run" : "runs"}
+          </h2>
+          <p className="text-sm text-[#9ca3af]">{startLabel}</p>
+        </div>
+        {runs.length > 0 && (
+          <div className="flex gap-2">
+            <CopyButton label="Copy runs" getText={() => buildRunsText(result)} />
+            <CopyButton label="Copy Markdown" getText={() => buildMarkdown(result)} />
+          </div>
+        )}
+      </div>
 
-      {/* Desktop: table */}
-      <table className="mt-3 hidden w-full text-left text-sm sm:table">
-        <thead>
-          <tr className="text-xs uppercase tracking-wide text-gray-400">
-            <th className="py-2 pr-3 font-medium">#</th>
-            <th className="py-2 pr-3 font-medium">Local time</th>
-            <th className="py-2 pr-3 font-medium">UTC time</th>
-            <th className="py-2 font-medium">Relative</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {runs.map((r) => (
-            <tr key={r.index} className="align-top">
-              <td className="py-2 pr-3 text-gray-400">{r.index}</td>
-              <td className="py-2 pr-3 text-gray-900">
-                {r.localDateTime}
-                {r.notes.length > 0 && (
-                  <span className="mt-0.5 block text-xs text-amber-600">{r.notes[0]}</span>
-                )}
-              </td>
-              <td className="py-2 pr-3 text-gray-600">
-                {r.utcDateTime} · {r.utcOffset}
-              </td>
-              <td className="py-2 text-gray-500">{r.relativeLabel}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {runs.length === 0 ? (
+        <p className="mt-4 text-sm text-[#6b7280]">
+          No matching run was found within the search horizon (15 years).
+        </p>
+      ) : (
+        <ul className="mt-4 space-y-2.5">
+          {runs.map((r, i) => {
+            const isNext = i === 0;
+            return (
+              <li
+                key={r.index}
+                className={`flex items-center gap-3.5 rounded-xl border p-3 ${
+                  isNext ? "border-[#fecaca] bg-[#fff1f0]" : "border-[#eef0f3] bg-[#f9fafb]"
+                }`}
+              >
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${
+                    isNext ? "bg-[#fee2e2] text-[#f97066]" : "bg-[#e0e7ff] text-[#4338ca]"
+                  }`}
+                >
+                  {r.index}
+                </span>
 
-      {/* Mobile: cards */}
-      <ul className="mt-3 space-y-3 sm:hidden">
-        {runs.map((r) => (
-          <li key={r.index} className="rounded-md border border-gray-100 p-3">
-            <div className="flex items-baseline justify-between">
-              <span className="text-xs text-gray-400">#{r.index}</span>
-              <span className="text-xs text-gray-500">{r.relativeLabel}</span>
-            </div>
-            <p className="mt-1 text-sm text-gray-900">{r.localDateTime}</p>
-            <p className="text-xs text-gray-500">
-              {r.utcDateTime} · {r.utcOffset}
-            </p>
-            {r.notes.length > 0 && <p className="mt-1 text-xs text-amber-600">{r.notes[0]}</p>}
-          </li>
-        ))}
-      </ul>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-sm font-semibold text-[#111827]">
+                    {r.localDateTime}
+                  </p>
+                  <p className="truncate font-mono text-xs text-[#9ca3af]">
+                    {r.utcDateTime} · {r.utcOffset}
+                  </p>
+                  {r.notes.length > 0 && (
+                    <p className="mt-0.5 text-xs text-[#92400e]">{r.notes[0]}</p>
+                  )}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  {isNext && (
+                    <span className="rounded-md bg-[#f97066] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                      Next
+                    </span>
+                  )}
+                  <span className="whitespace-nowrap text-sm text-[#6b7280]">{r.relativeLabel}</span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
