@@ -11,6 +11,7 @@ import { SummaryCard } from "./SummaryCard";
 import { FieldBreakdown } from "./FieldBreakdown";
 import { RunsTable } from "./RunsTable";
 import { WarningsPanel } from "./WarningsPanel";
+import { Footer } from "./Footer";
 
 const COMMON_TZ = [
   "UTC",
@@ -104,6 +105,7 @@ export function CronLens() {
     }`;
 
   return (
+    <>
     <div className="mx-auto max-w-6xl px-4 py-8 lg:py-10">
       {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -275,9 +277,8 @@ export function CronLens() {
         </div>
       </div>
 
-      <footer className="mt-12 text-center text-xs text-[#9ca3af]">
-        CronLens · 5-field, 6-field (seconds), and Quartz dialects · nicknames like @daily · names like MON/JAN
-      </footer>
     </div>
+    <Footer />
+    </>
   );
 }
