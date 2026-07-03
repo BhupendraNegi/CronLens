@@ -142,6 +142,9 @@ Colima forwards container ports to `localhost` automatically, so `localhost:3000
 
 ## 6. Deployment: GitHub Pages
 
+> Full pipeline diagrams, commands, and troubleshooting live in **[deployment.md](./deployment.md)**. This
+> section is the architectural summary.
+
 **Important:** the Docker image is *not* the deploy artifact. A **GitHub Actions** workflow builds the static
 site on CI and publishes it to Pages. Docker/Colima is purely for local parity.
 
