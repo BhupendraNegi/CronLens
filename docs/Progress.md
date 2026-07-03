@@ -7,6 +7,8 @@ Status legend: ⬜ not started · 🟡 in progress · ✅ done
 
 ---
 
+**Live:** https://bhupendranegi.github.io/CronLens/ — CI, E2E, and Pages deploy all green on `main` (2026-07-03).
+
 ## Decisions log
 
 | Date | Decision | Rationale |
@@ -50,8 +52,10 @@ Also added in this pass (per user request to borrow from `hookview`):
 - `README.md` rewritten with the `bin/` quick start. Makefile removed.
 
 Notes for future me:
-- Host has no `pnpm`; the lockfile was generated inside the image and extracted to the repo so CI's
-  `--frozen-lockfile` works. `bin/setup` re-extracts it if missing; rebuild the image if deps change.
+- Host has no `pnpm`. **Regenerate the lockfile after any `package.json` dep change** with
+  `docker compose run --rm web pnpm install --lockfile-only` (writes to the bind-mounted repo, no
+  node_modules purge prompt). Do NOT rely on extracting it from the image — that drifted once and broke CI
+  with `ERR_PNPM_OUTDATED_LOCKFILE`.
 - `pnpm install` inside the bind-mounted container prompts to purge the `node_modules` volume — expected;
   don't run it interactively. Rebuild the image (`docker compose build`) to refresh deps instead.
 - Resolved versions: Next 15.x, React 19, Tailwind 4.3, Vitest 3.2, TypeScript 5.9 (see `pnpm-lock.yaml`).
